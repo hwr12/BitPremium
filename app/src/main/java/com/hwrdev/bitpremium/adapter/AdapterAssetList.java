@@ -1,4 +1,4 @@
-package com.planet.premium.adapter;
+package com.hwrdev.bitpremium.adapter;
 
 import android.content.Context;
 import android.util.Log;
@@ -12,9 +12,10 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStoreOwner;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.planet.premium.R;
-import com.planet.premium.activity.sidesheet.AssetViewModel;
-import com.planet.premium.model.Asset;
+import com.hwrdev.bitpremium.R;
+import com.hwrdev.bitpremium.activity.sidesheet.AssetViewModel;
+import com.hwrdev.bitpremium.model.Asset;
+import com.hwrdev.bitpremium.model.BithumbAsset;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +48,7 @@ public class AdapterAssetList extends RecyclerView.Adapter<RecyclerView.ViewHold
         Log.d("리사이클러", "AdapterAssetList" + getItemCount());
 
     }
+
 
     public class OriginalViewHolder extends RecyclerView.ViewHolder {
         public ImageView image;

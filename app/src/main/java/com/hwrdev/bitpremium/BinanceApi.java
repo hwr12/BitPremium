@@ -1,4 +1,4 @@
-package com.planet.premium;
+package com.hwrdev.bitpremium;
 
 import android.content.Context;
 import android.util.Log;
@@ -8,10 +8,10 @@ import androidx.lifecycle.ViewModelStoreOwner;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.planet.premium.activity.sidesheet.AssetViewModel;
-import com.planet.premium.activity.sidesheet.BinanceApiService;
-import com.planet.premium.model.Asset;
-import com.planet.premium.utils.ModelError;
+import com.hwrdev.bitpremium.activity.sidesheet.AssetViewModel;
+import com.hwrdev.bitpremium.activity.sidesheet.BinanceApiService;
+import com.hwrdev.bitpremium.model.Asset;
+import com.hwrdev.bitpremium.utils.ModelError;
 
 
 import org.json.JSONArray;

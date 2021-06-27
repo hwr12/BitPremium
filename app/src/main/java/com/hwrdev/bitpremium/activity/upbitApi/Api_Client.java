@@ -1,25 +1,20 @@
-package com.hwrdev.bitpremium.activity.bithumbApi;
+package com.hwrdev.bitpremium.activity.upbitApi;
 
 import android.util.Log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hwrdev.bitpremium.activity.bithumbApi.HttpRequest;
+import com.hwrdev.bitpremium.activity.bithumbApi.Util;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-
 
 import tech.gusavila92.apache.commons.codec.binary.Base64;
 import tech.gusavila92.apache.commons.codec.binary.Hex;

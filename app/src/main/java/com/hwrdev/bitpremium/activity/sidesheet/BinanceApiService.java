@@ -1,4 +1,4 @@
-package com.planet.premium.activity.sidesheet;
+package com.hwrdev.bitpremium.activity.sidesheet;
 
 
 import com.google.gson.JsonObject;

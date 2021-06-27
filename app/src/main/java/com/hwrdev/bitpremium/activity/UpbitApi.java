@@ -1,11 +1,15 @@
 package com.hwrdev.bitpremium.activity;
 
+
+import java.io.IOException;
+import java.util.UUID;
 import android.content.Context;
 import android.util.Log;
 
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStoreOwner;
 
+import com.auth0.android.request.internal.Jwt;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonArray;
@@ -16,14 +20,13 @@ import com.hwrdev.bitpremium.activity.sidesheet.AssetViewModel;
 import com.hwrdev.bitpremium.activity.sidesheet.BinanceApiService;
 import com.hwrdev.bitpremium.model.Asset;
 import com.hwrdev.bitpremium.model.BithumbAsset;
-import com.hwrdev.bitpremium.utils.ModelError;
+import com.hwrdev.bitpremium.model.UpbitAsset;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -35,31 +38,35 @@ import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import okhttp3.ResponseBody;
-import retrofit2.Converter;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import retrofit2.Call;
+import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.converter.scalars.ScalarsConverterFactory;
 import tech.gusavila92.apache.commons.codec.binary.Hex;
+import tech.gusavila92.apache.http.HttpEntity;
+import tech.gusavila92.apache.http.HttpResponse;
+import tech.gusavila92.apache.http.util.EntityUtils;
 import tech.gusavila92.websocketclient.WebSocketClient;
 
-public class BithumbApi {
+public class UpbitApi {
     final String apiKey;
     final String apiSecret;
     private WebSocketClient mWebSocketClient;
     private Retrofit retrofit;
-    BinanceApiService service;
+    UpbitApiService service;
     String listenKey;
     Context ctx;
     AssetViewModel model;
     Api_Client api;
-
     interface RevealDetailsCallbacks {
         public String getDataFromResult(List<String> details);
     }
     RevealDetailsCallbacks callback;
-    List<BithumbAsset> assets = new ArrayList<>();
-    public BithumbApi(String apiKey, String apiSecret, Context ctx){
+    List<UpbitAsset> assets = new ArrayList<>();
+    public UpbitApi(String apiKey, String apiSecret, Context ctx){
         this.ctx = ctx;
         this.apiKey = apiKey;
         this.apiSecret = apiSecret;
@@ -69,29 +76,53 @@ public class BithumbApi {
 
     }
 
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> getMapFromJsonObject(JSONObject jsonObj )
-    {
-        Map<String, Object> map = null;
 
-        try {
-
-            map = new ObjectMapper().readValue(jsonObj.toString(), Map.class) ;
-
-        } catch (JsonParseException e) {
-            e.printStackTrace();
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return map;
-    }
 
     public void walletSnapShot()  {
-        HashMap<String, String> rgParams = new HashMap<String, String>();
-        rgParams.put("currency", "ALL");
+        String accessKey = System.getenv("UPBIT_OPEN_API_ACCESS_KEY");
+        String secretKey = System.getenv("UPBIT_OPEN_API_SECRET_KEY");
+        String serverUrl = System.getenv("https://api.upbit.com");
+        retrofit = new Retrofit.Builder()
+                .baseUrl("https://api.upbit.com")
+                .addConverterFactory(ScalarsConverterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        String jwtToken = Jwts.builder().claim("access_key",accessKey).claim("nonce", UUID.randomUUID().toString())
+                .signWith(SignatureAlgorithm.HS256, secretKey.getBytes())
+                .compact();
+        Log.v("JWT : - ",jwtToken);
+
+        service = retrofit.create(UpbitApiService.class);
+        String authenticationToken = "Bearer " + jwtToken;
+        service.getBalanceInfo(authenticationToken).enqueue(new retrofit2.Callback<JsonObject>(){
+            @Override
+            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+
+                JsonArray jsonArray = response.body().getAsJsonArray();
+                List<Asset> assets = new ArrayList<>();
+                for(int i = 0; i < jsonArray.size() ; i++) {
+                    Asset asset = new Asset();
+                    JsonObject jsObject = jsonArray.get(i).getAsJsonObject();
+
+                    if (jsObject.get("free").getAsDouble() == 0) {
+
+                    } else {
+                        asset.ticker = jsObject.get("asset").getAsString();
+                        asset.amount = jsObject.get("free").getAsString();
+                        assets.add(asset);
+                    }
+
+
+                }
+            }
+
+            @Override
+            public void onFailure(Call<JsonObject> call, Throwable t) {
+
+            }
+        });
+
 
         new Thread() {
             public void run() {
@@ -141,21 +172,7 @@ public class BithumbApi {
 
 
 
-    public void requestListenKey(){
-        service.startUserDataStream(apiKey).enqueue(new retrofit2.Callback<JsonObject>() {
-            @Override
-            public void onResponse(retrofit2.Call<JsonObject> call, retrofit2.Response<JsonObject> response) {
-                JsonObject jsonObject = response.body();
-                listenKey = jsonObject.get("listenKey").getAsString();
-                userDataStreamWS(listenKey);
-                Log.d("requestListenKey", listenKey);
-            }
-            @Override
-            public void onFailure(retrofit2.Call<JsonObject> call, Throwable t) {
-                Log.d("requestListenKey", t.getMessage());
-            }
-        });
-    }
+
 
     public void userDataStreamWS(String listenKey){
         URI uri = URI.create("wss://stream.binance.com:9443/ws/" + listenKey);

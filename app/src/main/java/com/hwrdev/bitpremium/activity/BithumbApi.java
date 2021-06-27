@@ -1,4 +1,4 @@
-package com.hwrdev.bitpremium;
+package com.hwrdev.bitpremium.activity;
 
 import android.content.Context;
 import android.util.Log;
@@ -6,13 +6,17 @@ import android.util.Log;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStoreOwner;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.hwrdev.bitpremium.activity.bithumbApi.Api_Client;
 import com.hwrdev.bitpremium.activity.sidesheet.AssetViewModel;
 import com.hwrdev.bitpremium.activity.sidesheet.BinanceApiService;
 import com.hwrdev.bitpremium.model.Asset;
+import com.hwrdev.bitpremium.model.BithumbAsset;
 import com.hwrdev.bitpremium.utils.ModelError;
-
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -24,7 +28,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -37,7 +43,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory;
 import tech.gusavila92.apache.commons.codec.binary.Hex;
 import tech.gusavila92.websocketclient.WebSocketClient;
 
-public class BinanceApi {
+public class BithumbApi {
     final String apiKey;
     final String apiSecret;
     private WebSocketClient mWebSocketClient;
@@ -46,96 +52,76 @@ public class BinanceApi {
     String listenKey;
     Context ctx;
     AssetViewModel model;
-
+    Api_Client api;
 
     interface RevealDetailsCallbacks {
         public String getDataFromResult(List<String> details);
     }
     RevealDetailsCallbacks callback;
-
-    public BinanceApi(String apiKey, String apiSecret, Context ctx){
+    List<BithumbAsset> assets = new ArrayList<>();
+    public BithumbApi(String apiKey, String apiSecret, Context ctx){
         this.ctx = ctx;
         this.apiKey = apiKey;
         this.apiSecret = apiSecret;
-        retrofit = new Retrofit.Builder()
-                .baseUrl("https://api.binance.com")
-                .addConverterFactory(ScalarsConverterFactory.create())
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        service = retrofit.create(BinanceApiService.class);
-
-        this.callback = new RevealDetailsCallbacks() {
-            @Override
-            public String getDataFromResult(List<String> details) {
-                //Do stuff here with the returned list of Strings
-
-                return details.toString();
-            }
-        };
-
+        api = new Api_Client(apiKey,
+                apiSecret);
         model = new ViewModelProvider((ViewModelStoreOwner) ctx).get(AssetViewModel.class);
+
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> getMapFromJsonObject(JSONObject jsonObj )
+    {
+        Map<String, Object> map = null;
+
+        try {
+
+            map = new ObjectMapper().readValue(jsonObj.toString(), Map.class) ;
+
+        } catch (JsonParseException e) {
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return map;
     }
 
     public void walletSnapShot()  {
-        long timestamp = getTimestamp();
-        String data = service.getAccountSnapshot(apiKey, null, timestamp, null).request().url().query() ;
+        HashMap<String, String> rgParams = new HashMap<String, String>();
+        rgParams.put("currency", "ALL");
 
-        Log.d("data", data);
-        String signature = "";
-        try {
-            signature = encode(apiSecret, data);
-            Log.d("sinature", signature);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        service.getAccountSnapshot(apiKey, null, timestamp, signature).enqueue(new retrofit2.Callback<JsonObject>() {
-            @Override
-            public void onResponse(retrofit2.Call<JsonObject> call, retrofit2.Response<JsonObject> response) {
-                JsonObject jsonObject = response.body();
+        new Thread() {
+            public void run() {
+                try {
+                    String result = api.callApi("/info/balance", rgParams);
+                    Log.d("자산정보", result);
+                    JSONObject jsonObject = new JSONObject(result).getJSONObject("data");
 
-                JsonArray jsonArray = jsonObject.getAsJsonArray("balances");
-                List<Asset> assets = new ArrayList<>();
-                for(int i = 0; i < jsonArray.size() ; i++) {
-                    Asset asset = new Asset();
-                    JsonObject jsObject = jsonArray.get(i).getAsJsonObject();
+                    Map<String, Object> map = getMapFromJsonObject(jsonObject);
 
-                    if (jsObject.get("free").getAsDouble() == 0) {
 
-                    } else {
-                        asset.ticker = jsObject.get("asset").getAsString();
-                        asset.amount = jsObject.get("free").getAsString();
-                        assets.add(asset);
+                    for (Map.Entry<String, Object> entry : map.entrySet()) {
+                        if((Double) Double.parseDouble(entry.getValue().toString()) != 0 && entry.getKey().contains("available")){
+                            BithumbAsset asset = new BithumbAsset();
+                            asset.ticker = entry.getKey().substring(10).toUpperCase();
+                            asset.amount = (String) entry.getValue();
+                            assets.add(asset);
+                            Log.d("빗썸", asset.ticker + "+" + asset.amount);
+                        }
                     }
+                    model.updateBithumb(assets);
 
 
+
+                } catch (Exception e) {
+                    Log.d("자산정보", "가져오기 실패");
+                    e.printStackTrace();
                 }
-                Log.d("asset", assets.get(0).ticker);
-
-                model.update(assets);
-
-
-                Log.d("accountSnapshot", jsonArray.toString());
-
-                if (response.errorBody() != null ) {
-                    Converter<ResponseBody, ModelError> errorConverter =
-                            retrofit.responseBodyConverter(ModelError.class, new Annotation[0]);
-                    try {
-                        ModelError error = errorConverter.convert(response.errorBody());
-                        Log.d("accountSnapshot", error.toString());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    // Now use error.getMessage()
-                }
-
-
-
             }
-            @Override
-            public void onFailure(retrofit2.Call<JsonObject> call, Throwable t) {
-                Log.d("accountSnapshot", t.getMessage());
-            }
-        });
+        }.start();
     }
 
 
@@ -144,7 +130,6 @@ public class BinanceApi {
         Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
         SecretKeySpec secret_key = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA256");
         sha256_HMAC.init(secret_key);
-
         return Hex.encodeHexString(sha256_HMAC.doFinal(data.getBytes("UTF-8")));
     }
 

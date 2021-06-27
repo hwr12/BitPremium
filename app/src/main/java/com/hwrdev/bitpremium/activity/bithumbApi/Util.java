@@ -1,3 +1,5 @@
+package com.hwrdev.bitpremium.activity.bithumbApi;
+
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -8,37 +10,38 @@ import java.util.Map.Entry;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.google.common.io.BaseEncoding;
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
+import tech.gusavila92.apache.commons.codec.binary.Base64;
+import tech.gusavila92.apache.commons.codec.binary.Hex;
 
 public class Util {
 
     private static final String DEFAULT_ENCODING = "UTF-8";
     private static final String HMAC_SHA512 = "HmacSHA512";
 
-    public static String base64Encode(byte[] bytes) {
-		String bytesEncoded = Base64.encode(bytes);
-		return bytesEncoded;
-    }
+//    public static String base64Encode(byte[] bytes) {
+//
+//		String bytesEncoded = Base64.encodeBase64(bytes);
+//		return bytesEncoded;
+//    }
 
-    public static String hashToString(String data, byte[] key) {
-		String result = null;
-		Mac sha512_HMAC;
-	
-		try {
-		    sha512_HMAC = Mac.getInstance("HmacSHA512");
-		    System.out.println("key : " + new String(key));
-		    SecretKeySpec secretkey = new SecretKeySpec(key, "HmacSHA512");
-		    sha512_HMAC.init(secretkey);
-	
-		    byte[] mac_data = sha512_HMAC.doFinal(data.getBytes());
-		    System.out.println("hex : " + bin2hex(mac_data));
-		    result = Base64.encode(mac_data);
-		} catch (Exception e) {
-		    e.printStackTrace();
-		}
-		return result;
-    }
+//    public static String hashToString(String data, byte[] key) {
+//		String result = null;
+//		Mac sha512_HMAC;
+//
+//		try {
+//		    sha512_HMAC = Mac.getInstance("HmacSHA512");
+//		    System.out.println("key : " + new String(key));
+//		    SecretKeySpec secretkey = new SecretKeySpec(key, "HmacSHA512");
+//		    sha512_HMAC.init(secretkey);
+//
+//		    byte[] mac_data = sha512_HMAC.doFinal(data.getBytes());
+//		    System.out.println("hex : " + bin2hex(mac_data));
+//		    result = Base64.encode(mac_data);
+//		} catch (Exception e) {
+//		    e.printStackTrace();
+//		}
+//		return result;
+//    }
 
     public static byte[] hmacSha512(String value, String key) {
 		try {
@@ -56,9 +59,9 @@ public class Util {
 		}
     }
 
-    public static String asHex(byte[] bytes) {
-    	return new String(Base64.encode(bytes));
-    }
+//    public static String asHex(byte[] bytes) {
+//    	return new String(Base64.encode(bytes));
+//    }
 
     public static String bin2hex(byte[] data) {
     	return String.format("%0" + (data.length * 2) + "X", new BigInteger(1, data));
